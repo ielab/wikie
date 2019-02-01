@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>wikie | Forbidden!</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header><h1>Forbidden</h1></header>
+        <footer>
+            Make sure you have been provided the correct permissions to access this page. Are you also sure you are <a href="/">logged in</a>?
+            <button onclick="window.history.back()">Back to safety</button>
+        </footer>
+    </article>
+</main>
+</body>
+</html>

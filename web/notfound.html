@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Page</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header>The page at <u>{{ .Path }}</u> was not found. You are now editing this page.</header>
+        <footer>
+            <button id="save">Save</button>
+            <button onclick="window.history.back()" class="error">Cancel</button>
+        </footer>
+    </article>
+    {{ template "editor" }}
+    <script type="text/javascript">
+        var el = document.getElementById("save");
+        el.addEventListener("click", function (e) {
+            var req = new XMLHttpRequest();
+            req.addEventListener("load", function (ev) {
+                if (ev.currentTarget.status === 200) {
+                    window.location = window.location;
+                } else {
+                    alert("something went wrong! try again in a minute");
+                }
+            });
+            req.open("put", window.location);
+            req.setRequestHeader("content-type", "application/json");
+            req.send(JSON.stringify(editor.getContents()))
+        })
+    </script>
+</main>
+</body>
+</html>

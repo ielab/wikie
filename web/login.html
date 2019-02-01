@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>wikie | login using rocket.chat</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header>Login using Rocket.Chat details</header>
+        <footer>
+            <form action="/login/rocket" method="post">
+                <fieldset class="flex one">
+                    <label><input name="email" type="text" placeholder="alice@example.com"></label>
+                    <label><input name="password" type="password" placeholder="***************"></label>
+                </fieldset>
+                <input type="submit" class="button" value="Login">
+            </form>
+        </footer>
+    </article>
+</main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Page</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header>You are editing the page at <u>{{ .Path }}</u></header>
+        <footer>
+            <button id="save">Save</button>
+            <button id="cancer error" onclick="window.location=window.location.href.split('?')[0];">Cancel</button>
+        </footer>
+    </article>
+    {{ template "editor" }}
+    <script type="text/javascript">
+        editor.setContents({{ .Delta }})
+    </script>
+
+    <script type="text/javascript">
+        var el = document.getElementById("save");
+        el.addEventListener("click", function (e) {
+            var req = new XMLHttpRequest();
+            req.addEventListener("load", function (ev) {
+                if (ev.currentTarget.status === 200) {
+                    window.location = window.location = window.location.href.split('?')[0];
+                } else {
+                    alert("something went wrong! try again in a minute");
+                }
+            });
+            req.open("post", window.location);
+            req.setRequestHeader("content-type", "application/json");
+            req.send(JSON.stringify(editor.getContents()))
+        })
+    </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>wikie | Search</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header><h1>Search Results</h1></header>
+        <footer>
+            <form action="/search" method="get">
+                <label><input type="search" name="q" placeholder="search pages" value="{{ .Query }}"/></label>
+                <input type="submit" style="visibility: hidden; display: none;">
+            </form>
+            <ol>
+                {{ range $i, $page := .Pages }}
+                    <li>
+                        <b><a href="/w{{ $page.Path}}">{{ $page.Path }}</a></b>
+                        {{ $page.Snippet }}
+                    </li>
+                {{ end }}
+            </ol>
+        </footer>
+    </article>
+</main>
+</body>
+</html>

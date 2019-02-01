@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>wikie | permissions</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    <article class="card">
+        <header>Set user permissions</header>
+        <footer>
+            {{ range $user, $permissions := . }}
+                {{ range $permission := $permissions}}
+                    <form action="/permissions" method="POST">
+                        <fieldset class="flex">
+                            <label><input type="text" name="user" value="{{ $user }}" placeholder="{{ $user }}"></label>
+                            <label><input type="text" name="path" value="{{ .Path }}" placeholder="{{ .Path }}"></label>
+                            <label><input type="number" name="access" value="{{ .Access }}" placeholder="{{ .Access }}"></label>
+                            <label><input type="submit" class="error" name="action" value="-" style="font-family: monospace"></label>
+                        </fieldset>
+                    </form>
+                {{end}}
+            {{ end }}
+            <form action="/permissions" method="POST">
+                <fieldset class="flex">
+                    <label><input type="text" name="user" placeholder="username"></label>
+                    <label><input type="text" name="path" placeholder="/w/home"></label>
+                    <label><input type="number" name="access" value="1" placeholder="1"></label>
+                    <label><input type="submit" class="success" name="action" value="+" style="font-family: monospace"></label>
+                </fieldset>
+            </form>
+        </footer>
+    </article>
+</main>
+</body>
+</html>
