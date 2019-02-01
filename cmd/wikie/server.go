@@ -96,7 +96,9 @@ func main() {
 		session.Set("token", d["authToken"])
 		session.Set("username", f["username"])
 		session.Save()
-		c.Redirect(http.StatusTemporaryRedirect, "/w/home")
+		c.Request.Method = "GET"
+		c.Redirect(http.StatusFound, "/w/home")
+		return
 	})
 	g.GET("/permissions", func(c *gin.Context) {
 		session := sessions.Default(c)
@@ -340,8 +342,10 @@ func main() {
 			return
 		}
 		p := wikie.Page{
-			Path: pagePath,
-			Body: i,
+			Path:        pagePath,
+			Body:        i,
+			LastUpdated: time.Now().Format(time.RFC822),
+			EditedBy:    session.Get("username").(string),
 		}
 		err = wikie.NewPage(esClient, pagePath, p)
 		if err != nil {
@@ -410,5 +414,5 @@ func main() {
 		c.Status(http.StatusOK)
 		return
 	})
-	log.Panic(http.ListenAndServe("0.0.0.0:1313", g))
+	log.Panic(http.ListenAndServe("0.0.0.0:"+config.Port, g))
 }
