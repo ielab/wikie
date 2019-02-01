@@ -65,6 +65,11 @@ func main() {
 		c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
 	})
 	g.GET("/", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if session.Get("token") != nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/w/home")
+			return
+		}
 		c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
 		return
 	})
