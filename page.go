@@ -3,7 +3,6 @@ package wikie
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/dchenk/go-render-quill"
 	"github.com/jlubawy/go-boilerpipe"
 	"html/template"
@@ -61,7 +60,6 @@ func (p Page) Snippet() template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(b))
 	s := []string{"<html><body>", string(b), "</body></html>"}
 	doc, err := boilerpipe.ParseDocument(bytes.NewBufferString(strings.Join(s, "")))
 

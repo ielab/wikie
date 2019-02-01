@@ -13,6 +13,8 @@
     {{ end }}
     <label for="modal_1" class="pseudo button">+</label>
     {{ .Render }}
+    <hr style="border-style:dashed"/>
+    <small>Last edit by <em>{{ .EditedBy }}</em> on {{ .LastUpdated }}.</small>
 </main>
 
 <div class="modal">
