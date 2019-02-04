@@ -31,7 +31,6 @@ func GetPage(client *elastic.Client, pagePath string) (Page, error) {
 	b, err := result.Source.MarshalJSON()
 	if err != nil {
 		return Page{}, err
-
 	}
 	var i map[string]interface{}
 	err = json.Unmarshal(b, &i)
@@ -39,7 +38,7 @@ func GetPage(client *elastic.Client, pagePath string) (Page, error) {
 		return Page{}, err
 	}
 	var page Page
-	page.Body = i["delta"].(map[string]interface{})["ops"]
+	page.Body = i["body"].(string)
 	page.Path = pagePath
 	rel := strings.Split(pagePath, "/")[1:]
 	for i := 0; i < len(rel); i++ {
@@ -50,6 +49,5 @@ func GetPage(client *elastic.Client, pagePath string) (Page, error) {
 	}
 	page.LastUpdated = i["updated"].(string)
 	page.EditedBy = i["edited"].(string)
-	page.Ops = i["delta"]
 	return page, nil
 }

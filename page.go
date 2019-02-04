@@ -2,8 +2,7 @@ package wikie
 
 import (
 	"bytes"
-	"encoding/json"
-	"github.com/dchenk/go-render-quill"
+	"github.com/gomarkdown/markdown"
 	"github.com/jlubawy/go-boilerpipe"
 	"html/template"
 	"strings"
@@ -16,51 +15,18 @@ type PageRelationship struct {
 
 type Page struct {
 	Path          string             `json:"path"`
-	Body          interface{}        `json:"delta"`
-	Ops           interface{}        `json:"ops"`
+	Body          string             `json:"body"`
 	Relationships []PageRelationship `json:"relationships"`
 	LastUpdated   string             `json:"updated"`
 	EditedBy      string             `json:"edited"`
 }
 
-func (p Page) Delta() template.JS {
-	b, err := json.Marshal(p.Ops)
-	if err != nil {
-		panic(err)
-	}
-	return template.JS(b)
-}
-
-func (p Page) delta() ([]byte, error) {
-	b, err := json.Marshal(p.Body)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 func (p Page) Render() template.HTML {
-	d, err := p.delta()
-	if err != nil {
-		panic(err)
-	}
-	html, err := quill.Render(d)
-	if err != nil {
-		panic(err)
-	}
-	return template.HTML(string(html))
+	return template.HTML(string(markdown.ToHTML([]byte(p.Body), nil, nil)))
 }
 
 func (p Page) Snippet() template.HTML {
-	d, err := p.delta()
-	if err != nil {
-		panic(err)
-	}
-	b, err := quill.Render(d)
-	if err != nil {
-		panic(err)
-	}
-	s := []string{"<html><body>", string(b), "</body></html>"}
+	s := []string{"<html><body>", string(markdown.ToHTML([]byte(p.Body), nil, nil)), "</body></html>"}
 	doc, err := boilerpipe.ParseDocument(bytes.NewBufferString(strings.Join(s, "")))
 
 	if err != nil {

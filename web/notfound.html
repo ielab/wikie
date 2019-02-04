@@ -28,7 +28,7 @@
             });
             req.open("put", window.location);
             req.setRequestHeader("content-type", "application/json");
-            req.send(JSON.stringify(editor.getContents()))
+            req.send(editor.value())
         })
     </script>
 </main>

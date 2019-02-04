@@ -339,16 +339,9 @@ func main() {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-		var i map[string]interface{}
-		err = json.Unmarshal(s, &i)
-		if err != nil {
-			fmt.Println(err)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
 		p := wikie.Page{
 			Path:        pagePath,
-			Body:        i,
+			Body:        string(s),
 			LastUpdated: time.Now().Format(time.RFC822),
 			EditedBy:    session.Get("username").(string),
 		}
@@ -397,16 +390,9 @@ func main() {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-		var i map[string]interface{}
-		err = json.Unmarshal(s, &i)
-		if err != nil {
-			fmt.Println(err)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
 		p := wikie.Page{
 			Path:        pagePath,
-			Body:        i,
+			Body:        string(s),
 			LastUpdated: time.Now().Format(time.RFC822),
 			EditedBy:    session.Get("username").(string),
 		}

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Page</title>
+    <title>wikie | editing {{ .Path }}</title>
     {{ template "libraries" }}
 </head>
 <body>
@@ -16,7 +16,7 @@
     </article>
     {{ template "editor" }}
     <script type="text/javascript">
-        editor.setContents({{ .Delta }})
+        editor.value({{ .Body }})
     </script>
 
     <script type="text/javascript">
@@ -32,7 +32,7 @@
             });
             req.open("post", window.location);
             req.setRequestHeader("content-type", "application/json");
-            req.send(JSON.stringify(editor.getContents()))
+            req.send(editor.value())
         })
     </script>
 </main>
