@@ -11,6 +11,10 @@
         main {
             max-width: 960px;
             margin: auto;
+            padding: 32px;
+        }
+        .ql-container {
+            font-size: 1.1em;
         }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -41,32 +45,32 @@
 {{ define "editor" }}
     <div id="editor"></div>
     <script type="text/javascript">
-        var Link = Quill.import('formats/link');
-
-        class MyLink extends Link {
-            static create(value) {
-                let node = super.create(value);
-                value = this.sanitize(value);
-                node.setAttribute('href', value);
-                node.removeAttribute('target');
-                return node;
-            }
-        }
-
-        Quill.register(MyLink);
+        // var Link = Quill.import('formats/link');
+        //
+        // class MyLink extends Link {
+        //     static create(value) {
+        //         let node = super.create(value);
+        //         value = this.sanitize(value);
+        //         node.setAttribute('href', value);
+        //         node.removeAttribute('target');
+        //         return node;
+        //     }
+        // }
+        //
+        // Quill.register(MyLink);
 
         var editor = new Quill('#editor', {
             theme: "snow",
             modules: {
                 toolbar: [
-                    ['bold', 'italic', 'underline', 'strike', 'link'],        // toggled buttons
-                    ['blockquote', 'code-block'],
-
-                    [{'list': 'ordered'}, {'list': 'bullet'}],
-                    [{'script': 'sub'}, {'script': 'super'}],      // superscript/subscript
-                    [{'indent': '-1'}, {'indent': '+1'}],          // outdent/indent
-
                     [{'header': [1, 2, 3, 4, 5, 6, false]}],
+
+                    ['bold', 'italic', 'underline', 'strike', 'link'],        // toggled buttons
+
+                    ['blockquote', 'code-block'],
+                    [{'list': 'ordered'}, {'list': 'bullet'}],
+
+                    [{'script': 'sub'}, {'script': 'super'}],      // superscript/subscript
 
                     [{'color': []}, {'background': []}],          // dropdown with defaults from theme
                     [{'font': []}],
