@@ -8,14 +8,19 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/h2non/filetype"
 	"github.com/ielab/wikie"
 	"golang.org/x/oauth2"
 	"gopkg.in/olivere/elastic.v5"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -105,6 +110,7 @@ func main() {
 		c.Redirect(http.StatusFound, "/w/home")
 		return
 	})
+
 	g.GET("/permissions", func(c *gin.Context) {
 		session := sessions.Default(c)
 		v := session.Get("token")
@@ -191,6 +197,165 @@ func main() {
 		}
 	})
 
+	g.GET("/storage", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if session.Get("token") == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+			return
+		}
+
+		permissions, err := wikie.GetPermissions(db)
+		if err != nil {
+			fmt.Println(err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		username := session.Get("username").(string)
+		var files []string
+
+		if p, ok := permissions[username]; ok {
+			err := filepath.Walk("storage", func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					return nil
+				}
+				for _, permission := range p {
+					if strings.Contains(path, permission.Path) && permission.Access >= wikie.PermissionRead {
+						files = append(files, path)
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+		}
+
+		c.HTML(http.StatusOK, "storage.html", files)
+	})
+	g.GET("/storage/*file", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if session.Get("token") == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+			return
+		}
+
+		filePath := c.Param("file")
+
+		// Check for permission to the page.
+		if v := session.Get("username"); v != nil {
+			if len(filePath) > 0 && filePath[len(filePath)-1] == '/' {
+				c.Redirect(http.StatusTemporaryRedirect, path.Join("/w", filePath[:len(filePath)-1]))
+				return
+			}
+			if ok, err := wikie.HasPermission(db, v.(string), filePath, wikie.PermissionRead); err == nil && !ok {
+				c.HTML(http.StatusForbidden, "forbidden.html", nil)
+				return
+			} else if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+		}
+
+		pathOnDisk := path.Join("storage", filePath)
+		if _, err := os.Stat(pathOnDisk); err != nil {
+			c.String(http.StatusForbidden, "forbidden")
+			return
+		}
+
+		f, err := os.OpenFile(pathOnDisk, os.O_RDONLY, 0777)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		t, err := filetype.MatchReader(f)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		c.Data(http.StatusOK, t.MIME.Value, b)
+	})
+	g.POST("/storage", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if session.Get("token") == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+			return
+		}
+
+		filePath := "/" + strings.Join(strings.Split(c.PostForm("file"), "/")[1:], "/")
+		fmt.Println(filePath)
+		if v, ok := c.GetPostForm("action"); v == "Delete" && ok {
+			if ok, err := wikie.HasPermission(db, session.Get("username").(string), filePath, wikie.PermissionWrite); err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			} else if !ok {
+				fmt.Println(err)
+				c.String(http.StatusForbidden, "forbidden")
+				return
+			}
+
+			fileOnDisk := c.PostForm("file")
+			fmt.Println(fileOnDisk)
+			if _, err := os.Stat(fileOnDisk); err == nil || os.IsExist(err) {
+				err = os.Remove(fileOnDisk)
+				if err != nil {
+					fmt.Println(err)
+					c.Status(http.StatusInternalServerError)
+					return
+				}
+			}
+
+		} else if v == "Upload" && ok {
+			file, err := c.FormFile("uploadfile")
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+
+			if ok, err := wikie.HasPermission(db, session.Get("username").(string), c.PostForm("namespace"), wikie.PermissionWrite); err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			} else if !ok {
+				fmt.Println(err)
+				c.String(http.StatusForbidden, "forbidden")
+				return
+			}
+
+			uploadPath := path.Join("storage", c.PostForm("namespace"))
+
+			err = os.MkdirAll(uploadPath, 0777)
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+
+			filename := filepath.Base(file.Filename)
+			err = c.SaveUploadedFile(file, path.Join(uploadPath, filename))
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+		}
+
+		c.Redirect(http.StatusFound, "/storage")
+	})
+
 	g.GET("/search", func(c *gin.Context) {
 		session := sessions.Default(c)
 		v := session.Get("token")
@@ -269,7 +434,7 @@ func main() {
 					c.Redirect(http.StatusTemporaryRedirect, path.Join("/w", pagePath[:len(pagePath)-1]))
 					return
 				}
-				if ok, err := wikie.HasPermission(db, v.(string), pagePath, wikie.PermissionWrite); err == nil && !ok {
+				if ok, err := wikie.HasPermission(db, v.(string), pagePath, wikie.PermissionRead); err == nil && !ok {
 					c.HTML(http.StatusForbidden, "forbidden.html", nil)
 					return
 				} else if err != nil {
@@ -277,7 +442,41 @@ func main() {
 					c.Status(http.StatusInternalServerError)
 					return
 				}
-				c.HTML(http.StatusOK, "notfound.html", wikie.Page{Path: pagePath})
+
+				permissions, err := wikie.GetPermissions(db)
+				if err != nil {
+					fmt.Println(err)
+					c.Status(http.StatusInternalServerError)
+					return
+				}
+
+				username := session.Get("username").(string)
+				var files []string
+				if p, ok := permissions[username]; ok {
+					err := filepath.Walk(path.Join("storage", pagePath), func(path string, info os.FileInfo, err error) error {
+						if err != nil {
+							return nil
+						}
+						if info.IsDir() {
+							return nil
+						}
+						for _, permission := range p {
+							if strings.Contains(path, permission.Path) && permission.Access >= wikie.PermissionRead {
+								files = append(files, path)
+							}
+						}
+						return nil
+					})
+					if err != nil {
+						fmt.Println(err)
+						c.Status(http.StatusInternalServerError)
+						return
+					}
+				}
+
+				page.Files = files
+
+				c.HTML(http.StatusOK, "notfound.html", wikie.Page{Path: pagePath, Files: files})
 				return
 			} else if err != nil {
 				fmt.Println(err)
@@ -297,6 +496,37 @@ func main() {
 				c.Status(http.StatusInternalServerError)
 				return
 			}
+
+			permissions, err := wikie.GetPermissions(db)
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+
+			username := session.Get("username").(string)
+			var files []string
+			if p, ok := permissions[username]; ok {
+				err := filepath.Walk(path.Join("storage", pagePath), func(path string, info os.FileInfo, err error) error {
+					if info.IsDir() {
+						return nil
+					}
+					for _, permission := range p {
+						if strings.Contains(path, permission.Path) && permission.Access >= wikie.PermissionRead {
+							files = append(files, path)
+						}
+					}
+					return nil
+				})
+				if err != nil {
+					fmt.Println(err)
+					c.Status(http.StatusInternalServerError)
+					return
+				}
+			}
+
+			page.Files = files
+
 			c.HTML(http.StatusOK, "edit.html", page)
 			return
 		}

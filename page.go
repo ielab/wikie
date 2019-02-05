@@ -19,6 +19,7 @@ type Page struct {
 	Relationships []PageRelationship `json:"relationships"`
 	LastUpdated   string             `json:"updated"`
 	EditedBy      string             `json:"edited"`
+	Files         []string
 }
 
 func (p Page) Render() template.HTML {

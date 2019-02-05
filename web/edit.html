@@ -15,6 +15,18 @@
         </footer>
     </article>
     {{ template "editor" }}
+
+    <article class="card">
+        <header>Files in this namespace</header>
+        <footer>
+            <ul>
+                {{ range .Files }}
+                    <li><a href="/{{ . }}">/{{ . }}</a></li>
+                {{ end }}
+            </ul>
+        </footer>
+    </article>
+
     <script type="text/javascript">
         editor.value({{ .Body }})
     </script>

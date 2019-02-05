@@ -14,19 +14,22 @@
             {{ range $user, $permissions := . }}
                 {{ range $permission := $permissions}}
                     <form action="/permissions" method="POST">
-                        <fieldset class="flex">
-                            <label><input type="text" name="user" value="{{ $user }}" placeholder="{{ $user }}"></label>
-                            <label><input type="text" name="path" value="{{ .Path }}" placeholder="{{ .Path }}"></label>
-                            <label><input type="number" name="access" value="{{ .Access }}" placeholder="{{ .Access }}"></label>
+                        <label><input type="hidden" name="user" value="{{ $user }}" placeholder="{{ $user }}"></label>
+                        <label><input type="hidden" name="path" value="{{ .Path }}" placeholder="{{ .Path }}"></label>
+                        <label><input type="hidden" name="access" value="{{ .Access }}" placeholder="{{ .Access }}"></label>
+                        <fieldset class="flex five">
+                            <div>{{ $user }}</div>
+                            <div class="two-fifth">{{ .Path }}</div>
+                            <div>{{ .Access }}</div>
                             <label><input type="submit" class="error" name="action" value="-" style="font-family: monospace"></label>
                         </fieldset>
                     </form>
                 {{end}}
             {{ end }}
             <form action="/permissions" method="POST">
-                <fieldset class="flex">
+                <fieldset class="flex five">
                     <label><input type="text" name="user" placeholder="username"></label>
-                    <label><input type="text" name="path" placeholder="/w/home"></label>
+                    <label class="two-fifth"><input type="text" name="path" placeholder="/home"></label>
                     <label><input type="number" name="access" value="1" placeholder="1"></label>
                     <label><input type="submit" class="success" name="action" value="+" style="font-family: monospace"></label>
                 </fieldset>

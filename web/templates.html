@@ -21,6 +21,10 @@
         .editor-toolbar > button {
             color: black;
         }
+
+        img {
+            width: 100%;
+        }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 {{ end }}
@@ -38,7 +42,8 @@
             <label for="bmenub" class="burger pseudo button">menu</label>
 
             <div class="menu">
-                <form action="/search" method="get">
+                <a class="pseudo button" href="/storage">Storage</a>
+                <form action="/search" method="get" style="display: inline-flex">
                     <label><input type="search" name="q" placeholder="search pages"/></label>
                     <input type="submit" style="visibility: hidden; display: none;">
                 </form>
@@ -55,7 +60,7 @@
             autoDownloadFontAwesome: true,
             insertTexts: {
                 link:["[","]()"],
-                image:["[","]()"]
+                image:["![","](/storage/)"]
             },
             promptURLS: true,
             showIcons: ['strikethrough', 'code', 'table', 'redo', 'heading', 'undo', 'heading-1', 'heading-2', 'heading-3', 'clean-block', 'horizontal-rule'],
