@@ -137,3 +137,28 @@ func GetPermissions(db *bolt.DB) (UserPermissions, error) {
 	})
 	return userPerms, err
 }
+
+func GetUserPermissions(db *bolt.DB, user string) (UserPermissions, error) {
+	userPerms := make(UserPermissions)
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("perms"))
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var perms []Permission
+			err := json.Unmarshal(v, &perms)
+			if err != nil {
+				return err
+			}
+			if _, ok := userPerms[string(k)]; !ok {
+				userPerms[string(k)] = []Permission{}
+			}
+			for _, perm := range perms {
+				if ok, err := HasPermission(db, user, perm.Path, perm.Access); err == nil && ok {
+					userPerms[string(k)] = append(userPerms[string(k)], perm)
+				}
+			}
+		}
+		return nil
+	})
+	return userPerms, err
+}

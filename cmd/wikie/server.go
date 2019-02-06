@@ -115,7 +115,6 @@ func main() {
 
 		// Check for permission to the page.
 		if v := session.Get("username"); v != nil {
-			fmt.Println(config.Admins, v)
 			for _, admin := range config.Admins {
 				if admin == v {
 					perms, err := wikie.GetPermissions(db)
@@ -128,6 +127,17 @@ func main() {
 					return
 				}
 			}
+
+			// Now we know the user is indeed not an admin.
+			// So show the user permissions for what they have been granted.
+			perms, err := wikie.GetUserPermissions(db, v.(string))
+			if err != nil {
+				fmt.Println(err)
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+			c.HTML(http.StatusOK, "permissions.html", perms)
+			return
 		}
 		c.HTML(http.StatusForbidden, "forbidden.html", nil)
 		return
@@ -150,45 +160,50 @@ func main() {
 		}
 
 		if v, ok := c.GetPostForm("action"); v == "+" && ok {
-			wikie.AddPermission(db, user, permPath, wikie.AccessType(access))
 			fmt.Println("add permission")
 			if v := session.Get("username"); v != nil {
-				fmt.Println(config.Admins, v)
 				for _, admin := range config.Admins {
 					if admin == v {
-						perms, err := wikie.GetPermissions(db)
-						if err != nil {
-							fmt.Println(err)
-							c.Status(http.StatusInternalServerError)
-							return
-						}
-						c.HTML(http.StatusOK, "permissions.html", perms)
+						wikie.AddPermission(db, user, permPath, wikie.AccessType(access))
+						c.Redirect(http.StatusFound, "/permissions")
 						return
 					}
 				}
-			}
-		} else if v == "-" && ok {
-			wikie.RemovePermission(db, user, permPath, wikie.AccessType(access))
-			fmt.Println("remove permission")
-			if v := session.Get("username"); v != nil {
-				fmt.Println(config.Admins, v)
-				for _, admin := range config.Admins {
-					if admin == v {
-						perms, err := wikie.GetPermissions(db)
-						if err != nil {
-							fmt.Println(err)
-							c.Status(http.StatusInternalServerError)
-							return
-						}
-						c.HTML(http.StatusOK, "permissions.html", perms)
+
+				if ok, err := wikie.HasPermission(db, v.(string), permPath, wikie.AccessType(access)); err == nil && ok {
+					fmt.Println(v, user, permPath)
+					err := wikie.AddPermission(db, user, permPath, wikie.AccessType(access))
+					if err != nil {
+						fmt.Println(err)
+						c.Status(http.StatusInternalServerError)
 						return
 					}
+					c.Redirect(http.StatusFound, "/permissions")
+					return
+				}
+			}
+		} else if v == "-" && ok {
+			if v := session.Get("username"); v != nil {
+				for _, admin := range config.Admins {
+					if admin == v {
+						wikie.RemovePermission(db, user, permPath, wikie.AccessType(access))
+						c.Redirect(http.StatusFound, "/permissions")
+						return
+					}
+				}
+				if ok, err := wikie.HasPermission(db, v.(string), permPath, wikie.AccessType(access)); err == nil && ok {
+					wikie.RemovePermission(db, user, permPath, wikie.AccessType(access))
+					c.Redirect(http.StatusFound, "/permissions")
+					return
 				}
 			}
 		} else {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
+
+		c.HTML(http.StatusForbidden, "forbidden.html", nil)
+		return
 	})
 
 	g.GET("/storage", func(c *gin.Context) {
