@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>wikie | {{ .Path }}</title>
+    {{ template "libraries" }}
+</head>
+<body>
+{{ template "header" }}
+<main>
+    {{ .Render }}
+    <hr style="border-style:dashed"/>
+    <div>
+        <small>You are viewing a <em>public page</em>. This page cannot be edited.</small>
+    </div>
+    <div>
+        <small>Last edit by <em>{{ .EditedBy }}</em> on {{ .LastUpdated }}.</small>
+    </div>
+</main>
+
+<div class="modal">
+    <input id="modal_1" type="checkbox"/>
+    <label for="modal_1" class="overlay"></label>
+    <article>
+        <header>
+            <h3>New Page</h3>
+            <label for="modal_1" class="close">&times;</label>
+        </header>
+        <section class="content">
+            <label><input type="text" id="page"></label>
+        </section>
+        <footer>
+            <label class="button" onclick="window.location=window.location+'/'+document.getElementById('page').value">Create</label>
+            <label for="modal_1" class="button dangerous">
+                Cancel
+            </label>
+        </footer>
+    </article>
+</div>
+</body>
+{{ template "blanks" }}
+</html>

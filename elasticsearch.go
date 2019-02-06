@@ -49,5 +49,8 @@ func GetPage(client *elastic.Client, pagePath string) (Page, error) {
 	}
 	page.LastUpdated = i["updated"].(string)
 	page.EditedBy = i["edited"].(string)
+	if v, ok := i["public"]; ok {
+		page.Public = v.(bool)
+	}
 	return page, nil
 }

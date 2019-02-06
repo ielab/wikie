@@ -10,6 +10,10 @@
     <article class="card">
         <header>You are editing the page at <u>{{ .Path }}</u></header>
         <footer>
+            <label style="float: right;">
+                <input type="checkbox" id="public" {{ if .Public }}checked{{ end }}>
+                <span class="checkable">Make page public?</span>
+            </label>
             <button id="save">Save</button>
             <button id="cancer error" onclick="window.location=window.location.href.split('?')[0];">Cancel</button>
         </footer>
@@ -44,9 +48,9 @@
             });
             req.open("post", window.location);
             req.setRequestHeader("content-type", "application/json");
-            req.send(editor.value())
+            req.send(JSON.stringify({Body: editor.value(), Public: document.getElementById("public").checked}))
         })
     </script>
 </main>
 </body>
-</html>
+</html>s
