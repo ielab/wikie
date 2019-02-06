@@ -18,16 +18,27 @@
             <button id="cancer error" onclick="window.location=window.location.href.split('?')[0];">Cancel</button>
         </footer>
     </article>
+
     {{ template "editor" }}
 
     <article class="card">
         <header>Files in this namespace</header>
-        <footer>
+        <header>
             <ul>
                 {{ range .Files }}
                     <li><a href="/{{ . }}">/{{ . }}</a></li>
                 {{ end }}
             </ul>
+        </header>
+        <footer>
+            <b>Upload new file
+                <small>(this will refresh the page)</small>
+            </b>
+            <form enctype="multipart/form-data" action="/storage" method="post" class="flex">
+                <input type="hidden" name="namespace" value="{{ .Path }}" placeholder="/home"/>
+                <label><input type="file" name="uploadfile"/></label>
+                <label><input type="submit" name="action" value="Upload"/></label>
+            </form>
         </footer>
     </article>
 
@@ -53,4 +64,4 @@
     </script>
 </main>
 </body>
-</html>s
+</html>

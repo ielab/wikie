@@ -10,7 +10,7 @@
 <main>
     <article class="card">
         <header>Files you have access to</header>
-        <footer>
+        <header>
             {{ range $file := . }}
                 <form action="/storage" method="POST">
                     <input type="hidden" name="file" value="{{ $file }}">
@@ -20,6 +20,8 @@
                     </div>
                 </form>
             {{end}}
+        </header>
+        <footer>
             <b>Upload new file</b>
             <form enctype="multipart/form-data" action="/storage" method="post">
                 <label><input type="text" name="namespace" value="/" placeholder="/home"/></label>

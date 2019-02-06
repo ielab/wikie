@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/h2non/filetype"
 	"github.com/ielab/wikie"
-	"golang.org/x/oauth2"
 	"gopkg.in/olivere/elastic.v5"
 	"io/ioutil"
 	"log"
@@ -22,11 +21,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
-
-var (
-	oAuth2Config *oauth2.Config
-	esClient     elastic.Client
 )
 
 //noinspection GoUnhandledErrorResult
@@ -248,7 +242,7 @@ func main() {
 				return
 			}
 			p := strings.Split(u.Path, "/")
-			if len(p) < 1 || p[1] != "public" {
+			if len(p) < 2 || p[1] != "public" {
 				c.HTML(http.StatusForbidden, "forbidden.html", nil)
 				return
 			}
@@ -373,7 +367,7 @@ func main() {
 			}
 		}
 
-		c.Redirect(http.StatusFound, "/storage")
+		c.Redirect(http.StatusFound, c.Request.Referer())
 	})
 
 	g.GET("/search", func(c *gin.Context) {

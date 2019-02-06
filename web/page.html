@@ -14,7 +14,14 @@
     <label for="modal_1" class="pseudo button">+</label>
     {{ .Render }}
     <hr style="border-style:dashed"/>
-    <small>Last edit by <em>{{ .EditedBy }}</em> on {{ .LastUpdated }}.</small>
+    {{ if .Public }}
+    <div>
+        <small>This page has been made public. The public version is accessible at <a href="/public{{ .Path }}">/public{{ .Path }}</a>.</small>
+    </div>
+    {{ end }}
+    <div>
+        <small>Last edit by <em>{{ .EditedBy }}</em> on {{ .LastUpdated }}.</small>
+    </div>
 </main>
 
 <div class="modal">
