@@ -15,10 +15,11 @@
                 <input type="submit" style="visibility: hidden; display: none;">
             </form>
             <ol>
+                {{ $query := .Query }}
                 {{ range $i, $page := .Pages }}
                     <li>
                         <b><a href="/w{{ $page.Path}}">{{ $page.Path }}</a></b>
-                        {{ $page.Snippet }}
+                        {{ $page.Snippet $query }}
                     </li>
                 {{ end }}
             </ol>

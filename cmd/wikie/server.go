@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
@@ -22,6 +21,11 @@ import (
 	"strings"
 	"time"
 )
+
+type server struct {
+	esClient     *elastic.Client
+	permissionDB *bolt.DB
+}
 
 //noinspection GoUnhandledErrorResult
 func main() {
@@ -44,13 +48,17 @@ func main() {
 	wikie.Init(db, config.Admins)
 
 	store := cookie.NewStore([]byte(config.CookieSecret))
-
 	g := gin.Default()
 	// Session middleware.
 	g.Use(sessions.Sessions("wikie", store))
 
 	g.LoadHTMLGlob("web/*.html")
 	g.Static("/static/", "web/static")
+
+	s := server{
+		esClient:     esClient,
+		permissionDB: db,
+	}
 
 	g.GET("/login/rocket", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", nil)
@@ -383,41 +391,7 @@ func main() {
 		c.Redirect(http.StatusFound, c.Request.Referer())
 	})
 
-	g.GET("/search", func(c *gin.Context) {
-		session := sessions.Default(c)
-		v := session.Get("token")
-		if v == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
-			return
-		}
-
-		if q := c.Query("q"); len(q) > 0 {
-			result, err := esClient.Search("wikie").Query(elastic.NewSimpleQueryStringQuery(q)).Do(context.Background())
-			if err != nil {
-				fmt.Println(err)
-				c.Status(http.StatusInternalServerError)
-				return
-			}
-			var pages []wikie.Page
-			for _, hit := range result.Hits.Hits {
-				page, err := wikie.GetPage(esClient, hit.Id)
-				if err != nil {
-					fmt.Println(err)
-					c.Status(http.StatusInternalServerError)
-					return
-				}
-				if ok, err := wikie.HasPermission(db, session.Get("username").(string), page.Path, wikie.PermissionRead); err == nil && ok {
-					pages = append(pages, page)
-				}
-			}
-			c.HTML(http.StatusOK, "search.html", struct {
-				Pages []wikie.Page
-				Query string
-			}{pages, q})
-			return
-		}
-		c.HTML(http.StatusOK, "search.html", nil)
-	})
+	g.GET("/search", s.search)
 
 	g.GET("/public/*page", func(c *gin.Context) {
 		pagePath := c.Param("page")
@@ -625,7 +599,7 @@ func main() {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-		
+
 		p.Path = pagePath
 		p.LastUpdated = time.Now().Format(time.RFC822)
 		p.EditedBy = session.Get("username").(string)
