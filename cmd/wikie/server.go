@@ -30,8 +30,6 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(config)
-
 	esClient, err := elastic.NewClient(elastic.SetURL(config.ElasticsearchConfig.Hosts...))
 	if err != nil {
 		panic(err)
@@ -692,5 +690,18 @@ func main() {
 		c.Status(http.StatusOK)
 		return
 	})
+
+	fmt.Print(`
+          _ _    _      
+         (_) |  (_)     
+__      ___| | ___  ___ 
+\ \ /\ / / | |/ / |/ _ \
+ \ V  V /| |   <| |  __/
+  \_/\_/ |_|_|\_\_|\___|
+
+author: h.scells@uq.net.au
+version: 14.Feb.2019
+`)
+
 	log.Panic(http.ListenAndServe("0.0.0.0:"+config.Port, g))
 }
