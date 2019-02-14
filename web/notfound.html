@@ -10,11 +10,22 @@
     <article class="card">
         <header>The page at <u>{{ .Path }}</u> was not found. You are now editing this page.</header>
         <footer>
-            <button id="save">Save</button>
+            <label style="float: right;">
+                <input type="checkbox" id="public" {{ if .Public }}checked{{ end }}>
+                <span class="checkable">Make page public?</span>
+            </label>
+            <button class="save">Save</button>
             <button onclick="window.history.back()" class="error">Cancel</button>
         </footer>
     </article>
     {{ template "editor" }}
+    <article class="card">
+        <header>You are editing the page at <u>{{ .Path }}</u></header>
+        <footer>
+            <button class="save">Save</button>
+            <button class="cancer error" onclick="window.history.back()">Cancel</button>
+        </footer>
+    </article>
     <article class="card">
         <header>Files in this namespace</header>
         <footer>
@@ -26,20 +37,22 @@
         </footer>
     </article>
     <script type="text/javascript">
-        var el = document.getElementById("save");
-        el.addEventListener("click", function (e) {
-            var req = new XMLHttpRequest();
-            req.addEventListener("load", function (ev) {
-                if (ev.currentTarget.status === 200) {
-                    window.location = window.location;
-                } else {
-                    alert("something went wrong! try again in a minute");
-                }
-            });
-            req.open("put", window.location);
-            req.setRequestHeader("content-type", "application/json");
-            req.send(editor.value())
-        })
+        var els = document.getElementsByClassName("save");
+        for (var i = 0; i < els.length; i++) {
+            els[i].addEventListener("click", function () {
+                var req = new XMLHttpRequest();
+                req.addEventListener("load", function (ev) {
+                    if (ev.currentTarget.status === 200) {
+                        window.location = window.location = window.location.href.split('?')[0];
+                    } else {
+                        alert("something went wrong! try again in a minute");
+                    }
+                });
+                req.open("put", window.location);
+                req.setRequestHeader("content-type", "application/json");
+                req.send(JSON.stringify({Body: editor.value(), Public: document.getElementById("public").checked}))
+            })
+        }
     </script>
 </main>
 </body>

@@ -618,12 +618,17 @@ func main() {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-		p := wikie.Page{
-			Path:        pagePath,
-			Body:        string(s),
-			LastUpdated: time.Now().Format(time.RFC822),
-			EditedBy:    session.Get("username").(string),
+		var p wikie.Page
+		err = json.Unmarshal(s, &p)
+		if err != nil {
+			fmt.Println(err)
+			c.Status(http.StatusInternalServerError)
+			return
 		}
+		
+		p.Path = pagePath
+		p.LastUpdated = time.Now().Format(time.RFC822)
+		p.EditedBy = session.Get("username").(string)
 		err = wikie.NewPage(esClient, pagePath, p)
 		if err != nil {
 			fmt.Println(err)
