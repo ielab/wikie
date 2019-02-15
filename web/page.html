@@ -11,13 +11,14 @@
     {{ range .Relationships }}
         <a class="pseudo button" href="/w/{{ .URL }}">{{ .Title }}</a> /
     {{ end }}
-    <label for="modal_1" class="pseudo button">+</label>
+    <label for="modal_1" class="pseudo button new">+</label>
     {{ .Render }}
     <hr style="border-style:dashed"/>
+    <a class="button" onclick="window.location.href+='?edit'">Edit</a>
     {{ if .Public }}
-    <div>
-        <small>This page has been made public. The public version is accessible at <a href="/public{{ .Path }}">/public{{ .Path }}</a>.</small>
-    </div>
+        <div>
+            <small>This page has been made public. The public version is accessible at <a href="/public{{ .Path }}">/public{{ .Path }}</a>.</small>
+        </div>
     {{ end }}
     <div>
         <small>Last edit by <em>{{ .EditedBy }}</em> on {{ .LastUpdated }}.</small>
@@ -33,7 +34,7 @@
             <label for="modal_1" class="close">&times;</label>
         </header>
         <section class="content">
-            <label><input type="text" id="page"></label>
+            <label><input type="text" id="page" autofocus></label>
         </section>
         <footer>
             <label class="button" onclick="window.location=window.location+'/'+document.getElementById('page').value">Create</label>
@@ -43,6 +44,15 @@
         </footer>
     </article>
 </div>
+<script type="text/javascript">
+    var els = document.getElementsByClassName("new");
+    var el = document.getElementById("page");
+    for (var i = 0; i < els.length; i++) {
+        els[i].addEventListener("click", function () {
+            el.focus();
+        })
+    }
+</script>
 </body>
 {{ template "blanks" }}
 </html>
