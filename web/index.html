@@ -1,11 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Page</title>
+    <link rel="preload" href="/static/bg-lg.png" as="image">
+    <title>wikie</title>
     {{ template "libraries" }}
+    <style>
+        body {
+            background-color: rgb(39, 123, 79);
+        }
+
+        .background {
+            background-image: url("/static/bg-sm.jpg");
+            animation: sm 1s;
+            animation-delay: 2s;
+            animation-fill-mode: forwards;
+        }
+
+        .background-lg {
+            background-image: url("/static/bg-lg.jpg");
+            animation: lg 1s;
+            animation-delay: 2s;
+            animation-fill-mode: forwards;
+        }
+
+        .background, .background-lg {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            top: 0;
+            right: 0;
+            filter: blur(20px);
+            background-position: center;
+            background-clip: content-box;
+            background-size: cover;
+        }
+
+        @keyframes sm {
+            99% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 0;
+                display: none;
+            }
+        }
+
+        @keyframes lg {
+            100% {
+                filter: blur(0px);
+            }
+        }
+
+        .content {
+            max-width: 480px;
+            margin: 20% auto auto;
+        }
+
+        body {
+            padding: 5%;
+        }
+    </style>
 </head>
 <body>
-{{ template "header" }}
-{{ template "editor" }}
+<div class="content">
+    <div class="background-lg"></div>
+    <div class="background"></div>
+    <div class="card">
+        <header><h2>wikie login</h2></header>
+        <footer>
+            {{ if .RocketChatConfig.Enabled }}
+                <a class="button" href="/login/rocket">Login using Rocket.Chat</a>
+            {{ end }}
+            {{ if .OAuth2Config.Enabled }}
+                <a class="button" href="/login/oauth2">Login using {{ if .OAuth2Config.Provider }}{{ .OAuth2Config.Provider }}{{ else }}OAuth2 Provider{{ end }}</a>
+            {{ end }}
+        </footer>
+    </div>
+    <p class="label" style="position: absolute; bottom: 0; right: 0; background: black;">Photo by Annie Spratt on Unsplash</p>
+</div>
 </body>
 </html>

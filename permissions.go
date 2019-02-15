@@ -21,27 +21,30 @@ type Permission struct {
 type UserPermissions map[string][]Permission
 
 func Init(db *bolt.DB, admins []string) error {
+	perms := []Permission{
+		{
+			Path:   "/",
+			Access: PermissionRead | PermissionWrite,
+		},
+	}
+	b, err := json.Marshal(&perms)
+	if err != nil {
+		return err
+	}
+
 	return db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("perms"))
+
 		if bucket == nil {
 			var err error
 			bucket, err = tx.CreateBucket([]byte("perms"))
 			if err != nil {
 				return err
 			}
-			perms := []Permission{
-				{
-					Path:   "/",
-					Access: PermissionRead | PermissionWrite,
-				},
-			}
-			b, err := json.Marshal(&perms)
-			if err != nil {
-				return err
-			}
-			for _, admin := range admins {
-				return bucket.Put([]byte(admin), b)
-			}
+		}
+
+		for _, admin := range admins {
+			return bucket.Put([]byte(admin), b)
 		}
 		return nil
 	})

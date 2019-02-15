@@ -12,9 +12,13 @@ import (
 
 func (s server) search(c *gin.Context) {
 	session := sessions.Default(c)
-	v := session.Get("token")
-	if v == nil {
-		c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+	token := session.Get("token")
+	if token == nil {
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	}
+	if _, ok := s.sessions[token.(string)]; !ok {
+		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
 	}
 

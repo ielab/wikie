@@ -1,0 +1,33 @@
+# Which port will the server run?
+port: "1313"
+
+# Who will be admin (to allocate permissions initially)?
+# Can be a username (if using rocket.chat).
+# Or an email (if using Google OAuth2).
+admins: ["admin", "admin@example.com"]
+
+# Authentication via rocket.chat.
+rocket.chat:
+  url: "https://rocket.chat.url"
+  enabled: false
+
+# Configure OAuth2
+oauth2:
+  clientid: "1234"
+  clientsecret: "abcd"
+  authurl: "https://accounts.google.com/o/oauth2/auth"
+  tokenurl: "https://accounts.google.com/o/oauth2/token"
+  redirect: "http://your.url/login/oauth2/callback"
+  scopes: [
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]
+  provider: "Google"
+  enabled: true
+
+# Cookie Secret.
+# Set this to something more secure.
+cookieSecret: "super secret"
+
+# Configure Elasticsearch.
+elasticsearch:
+  hosts: ["http://localhost:9200"]

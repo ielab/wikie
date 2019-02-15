@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/h2non/filetype"
 	"github.com/ielab/wikie"
+	"golang.org/x/oauth2"
 	"gopkg.in/olivere/elastic.v5"
 	"io/ioutil"
 	"log"
@@ -23,8 +24,24 @@ import (
 )
 
 type server struct {
+	config       wikie.Config
 	esClient     *elastic.Client
 	permissionDB *bolt.DB
+	oAuthConf    *oauth2.Config
+	sessions     map[string]bool
+}
+
+func (s server) hasPermissions(db *bolt.DB, user string) (bool, error) {
+	perms, err := wikie.GetUserPermissions(db, user)
+	if err != nil {
+		return false, err
+	}
+
+	if p, ok := perms[user]; !ok || (ok && len(p) == 0) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 //noinspection GoUnhandledErrorResult
@@ -56,66 +73,70 @@ func main() {
 	g.Static("/static/", "web/static")
 
 	s := server{
+		config:       config,
 		esClient:     esClient,
 		permissionDB: db,
+		sessions:     make(map[string]bool),
 	}
 
-	g.GET("/login/rocket", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login.html", nil)
-	})
-	g.GET("/logout/rocket", func(c *gin.Context) {
-		session := sessions.Default(c)
-		session.Clear()
-		session.Save()
-		c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
-	})
+	if s.config.OAuth2Config != nil {
+		s.oAuthConf = &oauth2.Config{
+			ClientID:     config.OAuth2Config.ClientID,
+			ClientSecret: config.OAuth2Config.ClientSecret,
+			RedirectURL:  config.OAuth2Config.Redirect,
+			Scopes:       config.OAuth2Config.Scopes,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  config.OAuth2Config.AuthURL,
+				TokenURL: config.OAuth2Config.TokenURL,
+			},
+		}
+	}
+
 	g.GET("/", func(c *gin.Context) {
 		session := sessions.Default(c)
 		if session.Get("token") != nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/w/home")
-			return
+			if _, ok := s.sessions[session.Get("token").(string)]; ok {
+				c.Redirect(http.StatusTemporaryRedirect, "/w/home")
+				return
+			}
 		}
-		c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
-		return
-	})
-	g.POST("/login/rocket", func(c *gin.Context) {
-		email, _ := c.GetPostForm("email")
-		password, _ := c.GetPostForm("password")
-		client := &http.Client{}
-		resp, err := client.PostForm(config.RocketChat+"/api/v1/login", url.Values{
-			"user":     []string{email},
-			"password": []string{password},
-		})
-		if err != nil {
-			fmt.Println(err)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		var i map[string]interface{}
-		err = json.NewDecoder(resp.Body).Decode(&i)
-		if err != nil {
-			fmt.Println(err)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-
-		d := i["data"].(map[string]interface{})
-		f := d["me"].(map[string]interface{})
-
-		session := sessions.Default(c)
-		session.Set("token", d["authToken"])
-		session.Set("username", f["username"])
-		session.Save()
-		c.Request.Method = "GET"
-		c.Redirect(http.StatusFound, "/w/home")
+		c.HTML(http.StatusOK, "index.html", config)
 		return
 	})
 
+	g.GET("/logout", s.logout)
+	if config.RocketChatConfig.Enabled {
+		g.GET("/login/rocket", s.loginRocketView)
+		g.POST("/login/rocket", s.loginRocket)
+	}
+
+	if config.OAuth2Config != nil && config.OAuth2Config.Enabled {
+		g.GET("/login/oauth2", s.loginOAuth2)
+		g.GET("/login/oauth2/callback", s.loginOAuth2Callback)
+	}
 	g.GET("/permissions", func(c *gin.Context) {
 		session := sessions.Default(c)
-		v := session.Get("token")
-		if v == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+
+		u := session.Get("username").(string)
+		perm, err := s.hasPermissions(db, u)
+		if err != nil {
+			fmt.Println(err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		if !perm {
+			c.HTML(http.StatusUnauthorized, "waiting.html", nil)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("user has no permissions to any pages"))
 			return
 		}
 
@@ -159,14 +180,17 @@ func main() {
 		}
 
 		session := sessions.Default(c)
-		v := session.Get("token")
-		if v == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
 			return
 		}
 
 		if v, ok := c.GetPostForm("action"); v == "+" && ok {
-			fmt.Println("add permission")
 			if v := session.Get("username"); v != nil {
 				for _, admin := range config.Admins {
 					if admin == v {
@@ -177,7 +201,6 @@ func main() {
 				}
 
 				if ok, err := wikie.HasPermission(db, v.(string), permPath, wikie.AccessType(access)); err == nil && ok {
-					fmt.Println(v, user, permPath)
 					err := wikie.AddPermission(db, user, permPath, wikie.AccessType(access))
 					if err != nil {
 						fmt.Println(err)
@@ -214,8 +237,27 @@ func main() {
 
 	g.GET("/storage", func(c *gin.Context) {
 		session := sessions.Default(c)
-		if session.Get("token") == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+
+		u := session.Get("username").(string)
+		perm, err := s.hasPermissions(db, u)
+		if err != nil {
+			fmt.Println(err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		if !perm {
+			c.HTML(http.StatusUnauthorized, "waiting.html", nil)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("user has no permissions to any pages"))
 			return
 		}
 
@@ -254,6 +296,16 @@ func main() {
 		filePath := c.Param("file")
 
 		session := sessions.Default(c)
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+
 		if session.Get("token") == nil {
 			// Check to see if the referrer is public
 			u, err := url.Parse(c.Request.Referer())
@@ -323,13 +375,17 @@ func main() {
 	})
 	g.POST("/storage", func(c *gin.Context) {
 		session := sessions.Default(c)
-		if session.Get("token") == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
 			return
 		}
 
 		filePath := "/" + strings.Join(strings.Split(c.PostForm("file"), "/")[1:], "/")
-		fmt.Println(filePath)
 		if v, ok := c.GetPostForm("action"); v == "Delete" && ok {
 			if ok, err := wikie.HasPermission(db, session.Get("username").(string), filePath, wikie.PermissionWrite); err != nil {
 				fmt.Println(err)
@@ -342,7 +398,6 @@ func main() {
 			}
 
 			fileOnDisk := c.PostForm("file")
-			fmt.Println(fileOnDisk)
 			if _, err := os.Stat(fileOnDisk); err == nil || os.IsExist(err) {
 				err = os.Remove(fileOnDisk)
 				if err != nil {
@@ -413,19 +468,51 @@ func main() {
 		}
 
 		c.HTML(http.StatusForbidden, "forbidden.html", nil)
+		return
 	})
 
 	wiki := g.Group("/w")
+
 	// Permission middleware.
-	wiki.GET("/*page", func(c *gin.Context) {
+	wiki.Use(func(c *gin.Context) {
 		session := sessions.Default(c)
-		v := session.Get("token")
-		if v == nil {
-			c.Redirect(http.StatusTemporaryRedirect, "/login/rocket")
+		token := session.Get("token")
+		if token == nil {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
+			return
+		}
+		if _, ok := s.sessions[token.(string)]; !ok {
+			c.Redirect(http.StatusTemporaryRedirect, "/")
 			return
 		}
 
+		u := session.Get("username").(string)
+		perm, err := s.hasPermissions(db, u)
+		if err != nil {
+			fmt.Println(err)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		if !perm {
+			c.HTML(http.StatusUnauthorized, "waiting.html", nil)
+			c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("user has no permissions to any pages"))
+			return
+		}
+
+		if _, ok := s.sessions[token.(string)]; ok {
+			c.Next()
+			return
+		}
+
+		c.HTML(http.StatusUnauthorized, "waiting.html", nil)
+		c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("user has no permissions to any pages"))
+		return
+	})
+
+	wiki.GET("/*page", func(c *gin.Context) {
 		// Check for permission to the page.
+		session := sessions.Default(c)
 		if v := session.Get("username"); v != nil {
 			pagePath := c.Param("page")
 			if len(pagePath) > 0 && pagePath[len(pagePath)-1] == '/' {

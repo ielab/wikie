@@ -50,7 +50,6 @@ func (p Page) Snippet(query string) template.HTML {
 				if len(text) > size && idx > size && idx < len(text)-size {
 					text = fmt.Sprintf("...%s...", text[idx-125:idx+125])
 				} else if len(text) > size && idx > len(text)-size {
-					fmt.Println(text[idx-125:])
 					text = fmt.Sprintf("...%s", text[idx-125:])
 				}
 				skip = false
